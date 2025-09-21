@@ -6,6 +6,7 @@ import nextcord
 from time import sleep
 import os
 from dotenv import load_dotenv
+from yt_dlp import YoutubeDL
 
 #This is the main file
 
@@ -19,6 +20,37 @@ bot = commands.Bot(command_prefix = "!",help_command=None,intents = intents) #Cr
 queue = []
 is_playing = False
 voice_client = None
+
+
+@bot.command(name="playlist")
+async def playlist(ctx, *, url):
+    ydl_opts = {
+        'quiet': True,
+        'extract_flat': True,
+        'force_generic_extractor': True,
+    }
+
+    with YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(url, download=False)
+
+    if 'entries' not in info:
+        await ctx.send("❌ Couldn't find any videos in the playlist.")
+        return
+
+    entries = info['entries']
+    await ctx.send(f"📂 Found {len(entries)} videos. Adding to queue...")
+
+    for entry in entries:
+        video_url = f"https://www.youtube.com/watch?v={entry['id']}"
+        title = download_vid(video_url)  # Your existing downloader
+        song_path = os.path.join("music", title)
+        queue.append((ctx.guild.id, song_path))
+
+    await ctx.send("✅ Playlist added to the queue!")
+
+    # If nothing is playing, start playback
+    if not is_playing and ctx.voice_client:
+        await play_next(ctx)
 
 
 @bot.command(name="play")
